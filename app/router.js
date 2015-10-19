@@ -29,6 +29,7 @@ Router.map(function() {
     });
 
     this.resource('deprecations');
+    this.resource('actions');
   });
 
 });

@@ -10,6 +10,7 @@ import PromiseDebug from "ember-debug/promise-debug";
 import ContainerDebug from "ember-debug/container-debug";
 import DeprecationDebug from "ember-debug/deprecation-debug";
 import Session from "ember-debug/services/session";
+import ActionDebug from "ember-debug/action-debug";
 
 const Ember = window.Ember;
 const { Object: EmberObject, run, Application, namespaces } = Ember;
@@ -51,7 +52,8 @@ const EmberDebug = EmberObject.extend({
     'containerDebug',
     'deprecationDebug',
     'objectInspector',
-    'session'
+    'session',
+    'actionDebug'
     ].forEach(prop => {
       let handler = this.get(prop);
       if (handler) {
@@ -93,6 +95,7 @@ const EmberDebug = EmberObject.extend({
       this.startModule('promiseDebug', PromiseDebug);
       this.startModule('containerDebug', ContainerDebug);
       this.startModule('deprecationDebug', DeprecationDebug);
+      this.startModule('actionDebug', ActionDebug);
 
       this.generalDebug.sendBooted();
       this.viewDebug.sendTree();

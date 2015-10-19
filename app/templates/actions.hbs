@@ -1,0 +1,36 @@
+<div class="split">
+
+  {{#draggable-column
+          width=180
+          classNames="split__panel split__panel--sidebar-2 nav"}}
+
+    <div class="split__panel__bd">
+      {{#if hasRouteActions}}
+        <div class="nav__title">
+          <h3>Route</h3>
+        </div>
+        <ul>
+          {{#each sortedRouteActions as |action|}}
+            <li><a>{{action.name}}</a></li>
+          {{/each}}
+        </ul>
+      {{/if}}
+      {{#if hasControllerActions}}
+        <div class="nav__title">
+          <h3>Controller</h3>
+        </div>
+        <ul>
+          {{#each sortedControllerActions as |action|}}
+            <li><a>{{action.name}}</a></li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+  {{/draggable-column}}
+
+  <div class="split__panel">
+    <div class="split__panel__bd">
+      <em>Action invocations will come here</em>
+    </div>
+  </div>
+</div>
