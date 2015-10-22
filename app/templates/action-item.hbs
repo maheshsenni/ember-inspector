@@ -1,0 +1,16 @@
+<div class="list-tree__item row" data-label="action-row">
+  <div class="cell">
+    {{name}}
+  </div>
+  <div class="cell">
+    <div class="list-tree__limited cell_clickable">
+      <span>({{argsLength}})</span>
+    </div>
+    <div class="list-tree__right-helper">
+      {{send-to-console action="sendArgsToConsole" param=args}}
+    </div>
+  </div>
+  <div class="cell">
+    {{targetType}}
+  </div>
+</div>

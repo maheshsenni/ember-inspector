@@ -6,6 +6,8 @@ const { oneWay } = computed;
 
 const keys = Object.keys || Ember.keys;
 
+const systemDefinedActions = ['_super', 'finalizeQueryParamChange', 'queryParamsDidChange'];
+
 export default EmberObject.extend(PortMixin, {
 
   portNamespace: 'action',
@@ -13,6 +15,8 @@ export default EmberObject.extend(PortMixin, {
   application: oneWay('namespace.application').readOnly(),
 
   port: oneWay('namespace.port').readOnly(),
+
+  objectInspector: oneWay('namespace.objectInspector').readOnly(),
 
   adapter: oneWay('port.adapter').readOnly(),
 
@@ -30,32 +34,47 @@ export default EmberObject.extend(PortMixin, {
 
   currentPath: oneWay('applicationController.currentPath').readOnly(),
 
-  sendActions: observer('currentPath', function() {
+  getRouteActions() {
     let routeName = this.get('currentPath');
-    
     let route = this.get('container').lookup('route:' + routeName);
-    let controller = this.get('container').lookup('controller:' + routeName);
-    
     let routeActionsHash = route.get('_actions') || [];
-    
-    let systemDefinedActions = ['_super', 'finalizeQueryParamChange', 'queryParamsDidChange'];
     // remove system defined actions from actions names
     let routeActions = keys(routeActionsHash).removeObjects(systemDefinedActions).map(function(n) {
       return {
         name: n,
         target: 'route'
-      }; 
+      };
     });
+    this.set('routeActionsHash', routeActionsHash);
+    return routeActions;
+  },
 
+  getControllerActions() {
+    let routeName = this.get('currentPath');
+    let controller = this.get('container').lookup('controller:' + routeName);
     let controllerActionsHash = controller.get('_actions') || [];
 
     let controllerActions = keys(controllerActionsHash).map(function(n) {
       return {
         name: n,
         target: 'controller'
-      }; 
+      };
     });
 
+    this.set('controllerActionsHash', controllerActionsHash);
+    return controllerActions;
+  },
+
+  prepareForRoute: observer('currentPath', function() {
+    this.releaseActions();
+    let routeActions = this.getRouteActions();
+    let controllerActions = this.getControllerActions();
+    this.sendActions(routeActions, controllerActions);
+    this.watchActions(routeActions, controllerActions);
+  }),
+
+  sendActions(routeActions, controllerActions) {
+    let routeName = this.get('currentPath');
     later(() => {
       this.sendMessage('setActions', {
         routeName: routeName,
@@ -63,42 +82,66 @@ export default EmberObject.extend(PortMixin, {
         controllerActions: controllerActions
       });
     }, 50);
-  }),
+  },
+
+  sendDetectedAction(name, targetType, args) {
+    args = keys(args || {}).map(key => args[key]);
+
+    later(() => {
+      this.sendMessage('actionDetected', {
+        name: name,
+        targetType: targetType,
+        args: args,
+        argsLength: args.length
+      });
+    }, 50);
+  },
 
   messages: {
-    getActions() {
-      this.sendActions();
+    watch() {
+      this.prepareForRoute();
     },
-    stopActions() {
-      this.stopActionIntercept();
+    release() {
+      this.releaseActions();
     }
   },
 
-  // startActionIntercept(actionsHash) {
-  //   this.originalActions = {};
-  //   for (let actionName in actionsHash) {
-  //     if (!actionsHash.hasOwnProperty(actionName)) {
-  //       continue;
-  //     }
-  //     if (actionName !== 'queryParamsDidChange' && actionName !== 'finalizeQueryParamChange' && actionName !== '_super') {
-  //       let action = actionsHash[actionName];
-  //       this.originalActions[actionName] = action;
-  //       console.log('Setting up action intercept:', actionName);
-  //       actionsHash[actionName] = function() {
-  //         console.log('Action intercepted - ' + actionName);
-  //         action.apply(this, arguments);
-  //       }
-  //     }
-  //   }
-  // },
+  watchActions(routeActions, controllerActions) {
+    this.originalActions = {};
+    this.originalActions.path = this.get('currentPath');
 
-  // stopActionIntercept() {
-  //   let routeName = this.get('currentPath');
-  //   let route = this.get('container').lookup('route:' + routeName);
-  //   let actions = route.get('_actions');
-  //   for (let actionName in this.originalActions) {
-  //     console.log('Stopping action intercept for: ', actionName);
-  //     actions[actionName] = this.originalActions[actionName];
-  //   }
-  // }
+    let self = this;
+
+    let origRouteActions = {};
+    let origControllerActions = {};
+
+    let routeActionsHash = this.get('routeActionsHash');
+    let controllerActionsHash = this.get('controllerActionsHash');
+
+    routeActions.forEach(function(action) {
+      let name = action.name;
+      let actionImpl = routeActionsHash[name];
+      // backup original action implementation
+      origRouteActions[name] = actionImpl;
+      // wrap original implementation with action capturing
+      routeActionsHash[name] = function() {
+        self.sendDetectedAction(name, 'route', arguments);
+        actionImpl.apply(this, arguments);
+      };
+    });
+
+    this.originalActions.origRouteActions = origRouteActions;
+  },
+
+  releaseActions() {
+    if (!this.originalActions) {
+      return;
+    }
+    let routeName = this.originalActions.path;
+    let route = this.get('container').lookup('route:' + routeName);
+    let actions = route.get('_actions');
+    for (let actionName in this.originalActions.origRouteActions) {
+      actions[actionName] = this.originalActions.origRouteActions[actionName];
+    }
+  }
 });

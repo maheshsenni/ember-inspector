@@ -30,7 +30,19 @@
 
   <div class="split__panel">
     <div class="split__panel__bd">
-      <em>Action invocations will come here</em>
+      <div class="list-view">
+        <div class="list-view__header row">
+          <div class="cell cell_type_header" data-label="column-title">Name</div>
+          <div class="cell cell_type_header spacer"></div>
+          <div class="cell cell_type_header" data-label="column-title">Arguments</div>
+          <div class="cell cell_type_header spacer"></div>
+          <div class="cell cell_type_header" data-label="column-title">Target</div>
+          <div class="cell cell_type_header spacer"></div>
+        </div>
+        <div class="list-view__list-container">
+          {{view "actionList" content=detectedActions}}
+        </div>
+      </div>
     </div>
   </div>
 </div>
